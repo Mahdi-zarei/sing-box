@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"io"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -170,6 +172,9 @@ func run() error {
 	osSignals := make(chan os.Signal, 1)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(osSignals)
+	go func() {
+		_ = http.ListenAndServe(":3435", nil)
+	}()
 	for {
 		instance, cancel, err := create()
 		if err != nil {
