@@ -25,16 +25,17 @@ type InjectableInbound interface {
 }
 
 type InboundContext struct {
-	Inbound     string
-	InboundType string
-	IPVersion   uint8
-	Network     string
-	Source      M.Socksaddr
-	Destination M.Socksaddr
-	Domain      string
-	Protocol    string
-	User        string
-	Outbound    string
+	Inbound        string
+	InboundType    string
+	IPVersion      uint8
+	Network        string
+	Source         M.Socksaddr
+	Destination    M.Socksaddr
+	OriginalSource M.Socksaddr
+	Domain         string
+	Protocol       string
+	User           string
+	Outbound       string
 
 	// cache
 

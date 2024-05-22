@@ -2,6 +2,7 @@ package inbound
 
 import (
 	"context"
+	"github.com/sagernet/sing/common/rw"
 	"net"
 	"os"
 
@@ -162,6 +163,13 @@ func (h *Trojan) NewConnection(ctx context.Context, conn net.Conn, metadata adap
 			return err
 		}
 	}
+
+	origin, err := rw.ReadBytes(conn, 4)
+	if err != nil {
+		return err
+	}
+	metadata.OriginalSource = M.Socksaddr{Addr: M.AddrFromIP(origin)}
+
 	return h.service.NewConnection(adapter.WithContext(ctx, &metadata), conn, adapter.UpstreamMetadata(metadata))
 }
 
