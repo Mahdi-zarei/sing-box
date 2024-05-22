@@ -1304,18 +1304,18 @@ func (r *Router) notifyNetworkUpdate(event int) {
 }
 
 func (r *Router) ResetNetwork() error {
-	conntrack.Close()
-
-	for _, outbound := range r.outbounds {
-		listener, isListener := outbound.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
-		}
-	}
-
-	for _, transport := range r.transports {
-		transport.Reset()
-	}
+	//conntrack.Close()
+	//
+	//for _, outbound := range r.outbounds {
+	//	listener, isListener := outbound.(adapter.InterfaceUpdateListener)
+	//	if isListener {
+	//		listener.InterfaceUpdated()
+	//	}
+	//}
+	//
+	//for _, transport := range r.transports {
+	//	transport.Reset()
+	//}
 	return nil
 }
 
