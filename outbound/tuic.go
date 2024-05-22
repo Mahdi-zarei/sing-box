@@ -130,7 +130,7 @@ func (h *TUIC) filterClients(forceClose bool, err error) {
 			_ = client.CloseWithError(err)
 			delete(h.clients, addr)
 			h.mapDeleteCount++
-			h.logger.Warn("Closed client for ", addr, " with err \n", err)
+			h.logger.Warn("Closed client for ", addr, " with err ", err)
 		}
 	}
 	if h.mapDeleteCount >= badmap.DeleteThreshold {

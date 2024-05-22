@@ -108,7 +108,7 @@ func (h *Trojan) filterMuxClients(forceClose bool, err error) {
 			_ = client.Close()
 			delete(h.muxClients, addr)
 			h.mapDeleteCount++
-			h.logger.Warn("Closed mux client for ", addr, " with err \n", err)
+			h.logger.Warn("Closed mux client for ", addr, " with err ", err)
 		}
 	}
 	if h.mapDeleteCount >= badmap.DeleteThreshold {
