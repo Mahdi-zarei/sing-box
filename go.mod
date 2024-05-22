@@ -1,6 +1,18 @@
 module github.com/sagernet/sing-box
 
-go 1.20
+go 1.21
+
+replace (
+	github.com/sagernet/quic-go => github.com/Mahdi-zarei/quic-go v0.0.0-20240522134251-bac464d65d23
+	github.com/sagernet/reality => github.com/Mahdi-zarei/REALITY v0.0.0-20240522114505-8eac607231fc
+	github.com/sagernet/sing => github.com/Mahdi-zarei/sing v0.1.7-0.20240522114932-c4f606bc4e1e
+	github.com/sagernet/sing-mux => github.com/Mahdi-zarei/sing-mux v0.1.4-0.20240522115423-1b0f7e6ff553
+	github.com/sagernet/sing-quic => github.com/Mahdi-zarei/sing-quic v0.1.3-0.20240522120339-c1c6cbed8297
+	github.com/sagernet/sing-tun => github.com/Mahdi-zarei/sing-tun v0.2.1-0.20240522121041-a653b0c3701c
+	github.com/sagernet/sing-vmess => github.com/Mahdi-zarei/sing-vmess v0.1.8-0.20240314172917-b1e27d020f10
+	github.com/sagernet/smux => github.com/Mahdi-zarei/smux v0.0.0-20240314171221-92cb30c84de4
+	github.com/sagernet/wireguard-go => github.com/Mahdi-zarei/wireguard-go v0.0.0-20240314171302-363a9b5913d4
+)
 
 require (
 	berty.tech/go-libtor v1.0.385
@@ -75,6 +87,7 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo/v2 v2.9.7 // indirect
 	github.com/pierrec/lz4/v4 v4.1.14 // indirect
+	github.com/pires/go-proxyproto v0.7.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
