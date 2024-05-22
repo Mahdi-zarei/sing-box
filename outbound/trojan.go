@@ -158,7 +158,7 @@ func (h *Trojan) DialContext(ctx context.Context, network string, destination M.
 		metadata := adapter.ContextFrom(ctx)
 		var srcAddr string
 		if metadata != nil {
-			srcAddr = metadata.Source.IPAddr().String()
+			srcAddr = metadata.OriginalSource.IPAddr().String()
 		}
 		client, err := h.getMuxClientForIP(srcAddr)
 		if err != nil {
@@ -182,7 +182,7 @@ func (h *Trojan) ListenPacket(ctx context.Context, destination M.Socksaddr) (net
 		metadata := adapter.ContextFrom(ctx)
 		var srcAddr string
 		if metadata != nil {
-			srcAddr = metadata.Source.IPAddr().String()
+			srcAddr = metadata.OriginalSource.IPAddr().String()
 		}
 		client, err := h.getMuxClientForIP(srcAddr)
 		if err != nil {
