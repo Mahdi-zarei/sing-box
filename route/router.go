@@ -33,7 +33,6 @@ import (
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
-	"github.com/sagernet/sing/common/bufio/deadline"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -847,10 +846,6 @@ func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata ad
 		}
 		metadata.FakeIP = true
 		r.logger.DebugContext(ctx, "found fakeip domain: ", domain)
-	}
-
-	if deadline.NeedAdditionalReadDeadline(conn) {
-		conn = deadline.NewConn(conn)
 	}
 
 	if metadata.InboundOptions.SniffEnabled && !sniff.Skip(metadata) {
