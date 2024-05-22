@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"io"
 	"net"
-	"os"
 	"sync"
 	"time"
 
@@ -107,19 +106,19 @@ func (c *WebsocketConn) RemoteAddr() net.Addr {
 }
 
 func (c *WebsocketConn) SetDeadline(t time.Time) error {
-	return os.ErrInvalid
+	return c.Conn.SetDeadline(t)
 }
 
 func (c *WebsocketConn) SetReadDeadline(t time.Time) error {
-	return os.ErrInvalid
+	return c.Conn.SetReadDeadline(t)
 }
 
 func (c *WebsocketConn) SetWriteDeadline(t time.Time) error {
-	return os.ErrInvalid
+	return c.Conn.SetWriteDeadline(t)
 }
 
 func (c *WebsocketConn) NeedAdditionalReadDeadline() bool {
-	return true
+	return false
 }
 
 func (c *WebsocketConn) Upstream() any {
@@ -246,19 +245,19 @@ func (c *EarlyWebsocketConn) RemoteAddr() net.Addr {
 }
 
 func (c *EarlyWebsocketConn) SetDeadline(t time.Time) error {
-	return os.ErrInvalid
+	return c.conn.SetDeadline(t)
 }
 
 func (c *EarlyWebsocketConn) SetReadDeadline(t time.Time) error {
-	return os.ErrInvalid
+	return c.conn.SetReadDeadline(t)
 }
 
 func (c *EarlyWebsocketConn) SetWriteDeadline(t time.Time) error {
-	return os.ErrInvalid
+	return c.conn.SetWriteDeadline(t)
 }
 
 func (c *EarlyWebsocketConn) NeedAdditionalReadDeadline() bool {
-	return true
+	return false
 }
 
 func (c *EarlyWebsocketConn) Upstream() any {
