@@ -2,6 +2,7 @@ package mux
 
 import (
 	"context"
+	"github.com/sagernet/sing/common/timeout"
 	"net"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -54,7 +55,7 @@ func NewRouterWithOptions(router adapter.ConnectionRouter, logger logger.Context
 
 func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext) error {
 	if metadata.Destination == mux.Destination {
-		return r.service.NewConnection(adapter.WithContext(ctx, &metadata), conn, adapter.UpstreamMetadata(metadata))
+		return r.service.NewConnection(adapter.WithContext(ctx, &metadata), timeout.NewNetConnWithTimeout(conn, C.TCPIdleTimeout), adapter.UpstreamMetadata(metadata))
 	} else {
 		return r.router.RouteConnection(ctx, conn, metadata)
 	}
