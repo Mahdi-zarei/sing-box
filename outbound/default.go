@@ -2,6 +2,7 @@ package outbound
 
 import (
 	"context"
+	"github.com/sagernet/sing/common/timeout"
 	"net"
 	"net/netip"
 	"os"
@@ -74,6 +75,10 @@ func NewConnection(ctx context.Context, this N.Dialer, conn net.Conn, metadata a
 		outConn.Close()
 		return err
 	}
+
+	conn = timeout.NewNetConnWithTimeout(conn, C.TCPIdleTimeout)
+	outConn = timeout.NewNetConnWithTimeout(outConn, C.TCPIdleTimeout)
+
 	return CopyEarlyConn(ctx, conn, outConn)
 }
 
@@ -101,6 +106,10 @@ func NewDirectConnection(ctx context.Context, router adapter.Router, this N.Dial
 		outConn.Close()
 		return err
 	}
+
+	conn = timeout.NewNetConnWithTimeout(conn, C.TCPIdleTimeout)
+	outConn = timeout.NewNetConnWithTimeout(outConn, C.TCPIdleTimeout)
+
 	return CopyEarlyConn(ctx, conn, outConn)
 }
 
@@ -141,7 +150,12 @@ func NewPacketConnection(ctx context.Context, this N.Dialer, conn N.PacketConn, 
 		ctx, conn = canceler.NewPacketConn(ctx, conn, C.QUICTimeout)
 	case C.ProtocolDNS:
 		ctx, conn = canceler.NewPacketConn(ctx, conn, C.DNSTimeout)
+	default:
+		conn = timeout.NewPacketConnWithTimeout(conn, C.UDPTimeout)
 	}
+
+	outConn = timeout.NewNetPacketConnWithTimeout(outConn, C.UDPTimeout)
+
 	return bufio.CopyPacketConn(ctx, conn, bufio.NewPacketConn(outConn))
 }
 
@@ -185,7 +199,12 @@ func NewDirectPacketConnection(ctx context.Context, router adapter.Router, this 
 		ctx, conn = canceler.NewPacketConn(ctx, conn, C.QUICTimeout)
 	case C.ProtocolDNS:
 		ctx, conn = canceler.NewPacketConn(ctx, conn, C.DNSTimeout)
+	default:
+		conn = timeout.NewPacketConnWithTimeout(conn, C.UDPTimeout)
 	}
+
+	outConn = timeout.NewNetPacketConnWithTimeout(outConn, C.UDPTimeout)
+
 	return bufio.CopyPacketConn(ctx, conn, bufio.NewPacketConn(outConn))
 }
 
