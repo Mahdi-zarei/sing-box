@@ -76,7 +76,7 @@ func NewTrojan(ctx context.Context, router adapter.Router, logger log.ContextLog
 		}
 	}
 	if options.Multiplex != nil {
-		defaultMuxClt, err := mux.NewClientWithOptions((*trojanDialer)(outbound), logger, *options.Multiplex)
+		defaultMuxClt, err := mux.NewClientWithOptions(dialer.NewTimeoutDialer((*trojanDialer)(outbound)), logger, *options.Multiplex)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (h *Trojan) getMuxClientForIP(ip string) (*mux.Client, error) {
 }
 
 func (h *Trojan) createMuxClient() (*mux.Client, error) {
-	return mux.NewClientWithOptions((*trojanDialer)(h), h.logger, *h.options.Multiplex)
+	return mux.NewClientWithOptions(dialer.NewTimeoutDialer((*trojanDialer)(h)), h.logger, *h.options.Multiplex)
 }
 
 func (h *Trojan) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
