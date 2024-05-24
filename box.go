@@ -93,6 +93,7 @@ func New(options Options) (*Box, error) {
 		common.PtrValueOrDefault(options.NTP),
 		options.Inbounds,
 		options.PlatformInterface,
+		false,
 	)
 	if err != nil {
 		return nil, E.Cause(err, "parse route options")

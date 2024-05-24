@@ -97,6 +97,7 @@ type Router struct {
 	needPackageManager                 bool
 	wifiState                          adapter.WIFIState
 	started                            bool
+	disableWinPowListener              bool
 }
 
 func NewRouter(
@@ -107,6 +108,7 @@ func NewRouter(
 	ntpOptions option.NTPOptions,
 	inbounds []option.Inbound,
 	platformInterface platform.Interface,
+	disableWinPowListener bool,
 ) (*Router, error) {
 	router := &Router{
 		ctx:                   ctx,
@@ -134,6 +136,7 @@ func NewRouter(
 		needPackageManager: C.IsAndroid && platformInterface == nil && common.Any(inbounds, func(inbound option.Inbound) bool {
 			return len(inbound.TunOptions.IncludePackage) > 0 || len(inbound.TunOptions.ExcludePackage) > 0
 		}),
+		disableWinPowListener: disableWinPowListener,
 	}
 	router.dnsClient = dns.NewClient(dns.ClientOptions{
 		DisableCache:     dnsOptions.DNSClientOptions.DisableCache,
@@ -509,7 +512,7 @@ func (r *Router) Start() error {
 		r.geositeReader = nil
 	}
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && !r.disableWinPowListener {
 		powerListener, err := winpowrprof.NewEventListener(r.notifyWindowsPowerEvent)
 		if err == nil {
 			r.powerListener = powerListener
