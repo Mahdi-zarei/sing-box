@@ -2,6 +2,15 @@ module github.com/sagernet/sing-box
 
 go 1.20
 
+replace (
+	github.com/sagernet/quic-go => github.com/Mahdi-zarei/quic-go v0.0.0-20241017200736-f5fc1be6c163
+	github.com/sagernet/sing => github.com/Mahdi-zarei/sing v0.1.7-0.20241017200531-107eeb58690c
+	github.com/sagernet/sing-mux => github.com/Mahdi-zarei/sing-mux v0.1.4-0.20240522115423-1b0f7e6ff553
+	github.com/sagernet/sing-quic => github.com/Mahdi-zarei/sing-quic v0.1.3-0.20240825234844-d590afc7fd41
+	github.com/sagernet/sing-vmess => github.com/Mahdi-zarei/sing-vmess v0.1.8-0.20240826001433-36420026e9b5
+	github.com/sagernet/wireguard-go => github.com/Mahdi-zarei/wireguard-go v0.0.0-20240314171302-363a9b5913d4
+)
+
 require (
 	berty.tech/go-libtor v1.0.385
 	github.com/caddyserver/certmagic v0.20.0
