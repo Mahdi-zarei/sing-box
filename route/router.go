@@ -525,7 +525,8 @@ func (r *Router) Start() error {
 		err := r.powerListener.Start()
 		monitor.Finish()
 		if err != nil {
-			return E.Cause(err, "start power listener")
+			r.logger.Warn("start power listener: ", err)
+			r.powerListener = nil
 		}
 	}
 
