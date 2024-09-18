@@ -182,6 +182,9 @@ func (r *Router) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg, er
 }
 
 func (r *Router) Lookup(ctx context.Context, domain string, strategy dns.DomainStrategy) ([]netip.Addr, error) {
+	if strings.HasSuffix("."+domain, ".localhost") {
+		return []netip.Addr{netip.AddrFrom4([4]byte{127, 0, 0, 1})}, nil
+	}
 	var (
 		responseAddrs []netip.Addr
 		cached        bool
