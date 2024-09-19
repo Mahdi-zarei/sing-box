@@ -2,6 +2,8 @@ module github.com/sagernet/sing-box
 
 go 1.20
 
+replace github.com/sagernet/sing-dns => github.com/Mahdi-zarei/sing-dns v0.3.0-beta.14.0.20240920072724-5aaefdab8381
+
 require (
 	berty.tech/go-libtor v1.0.385
 	github.com/caddyserver/certmagic v0.20.0

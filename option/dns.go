@@ -20,6 +20,8 @@ type DNSServerOptions struct {
 	Strategy             DomainStrategy `json:"strategy,omitempty"`
 	Detour               string         `json:"detour,omitempty"`
 	ClientSubnet         *AddrPrefix    `json:"client_subnet,omitempty"`
+	Inet4Response        string         `json:"inet4_response,omitempty"`
+	Inet6Response        string         `json:"inet6_response,omitempty"`
 }
 
 type DNSClientOptions struct {

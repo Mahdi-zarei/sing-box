@@ -242,13 +242,17 @@ func NewRouter(
 			} else if dnsOptions.ClientSubnet != nil {
 				clientSubnet = dnsOptions.ClientSubnet.Build()
 			}
+			inet4Resp, _ := netip.ParseAddr(server.Inet4Response)
+			inet6Resp, _ := netip.ParseAddr(server.Inet6Response)
 			transport, err := dns.CreateTransport(dns.TransportOptions{
-				Context:      ctx,
-				Logger:       logFactory.NewLogger(F.ToString("dns/transport[", tag, "]")),
-				Name:         tag,
-				Dialer:       detour,
-				Address:      server.Address,
-				ClientSubnet: clientSubnet,
+				Context:       ctx,
+				Logger:        logFactory.NewLogger(F.ToString("dns/transport[", tag, "]")),
+				Name:          tag,
+				Dialer:        detour,
+				Address:       server.Address,
+				ClientSubnet:  clientSubnet,
+				Inet4Response: inet4Resp,
+				Inet6Response: inet6Resp,
 			})
 			if err != nil {
 				return nil, E.Cause(err, "parse dns server[", tag, "]")
