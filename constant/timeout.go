@@ -7,6 +7,7 @@ const (
 	TCPKeepAliveInterval       = 75 * time.Second
 	TCPConnectTimeout          = 5 * time.Second
 	TCPTimeout                 = 15 * time.Second
+	TCPIdleTimeout             = 10 * time.Minute
 	ReadPayloadTimeout         = 300 * time.Millisecond
 	DNSTimeout                 = 10 * time.Second
 	UDPTimeout                 = 5 * time.Minute

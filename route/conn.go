@@ -3,6 +3,7 @@ package route
 import (
 	"context"
 	"errors"
+	"github.com/sagernet/sing/common/timeout"
 	"io"
 	"net"
 	"net/netip"
@@ -108,8 +109,8 @@ func (m *ConnectionManager) NewConnection(ctx context.Context, this N.Dialer, co
 		m.connections.Remove(element)
 	})
 	var done atomic.Bool
-	go m.connectionCopy(ctx, conn, remoteConn, false, &done, onClose)
-	go m.connectionCopy(ctx, remoteConn, conn, true, &done, onClose)
+	go m.connectionCopy(ctx, timeout.NewNetConnWithTimeout(conn, C.TCPIdleTimeout), timeout.NewNetConnWithTimeout(remoteConn, C.TCPIdleTimeout), false, &done, onClose)
+	go m.connectionCopy(ctx, timeout.NewNetConnWithTimeout(remoteConn, C.TCPIdleTimeout), timeout.NewNetConnWithTimeout(conn, C.TCPIdleTimeout), true, &done, onClose)
 }
 
 func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dialer, conn N.PacketConn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
@@ -226,8 +227,8 @@ func (m *ConnectionManager) NewPacketConnection(ctx context.Context, this N.Dial
 		m.connections.Remove(element)
 	})
 	var done atomic.Bool
-	go m.packetConnectionCopy(ctx, conn, destination, false, &done, onClose)
-	go m.packetConnectionCopy(ctx, destination, conn, true, &done, onClose)
+	go m.packetConnectionCopy(ctx, timeout.NewPacketConnWithTimeout(conn, C.UDPTimeout), timeout.NewPacketConnWithTimeout(destination, C.UDPTimeout), false, &done, onClose)
+	go m.packetConnectionCopy(ctx, timeout.NewPacketConnWithTimeout(destination, C.UDPTimeout), timeout.NewPacketConnWithTimeout(conn, C.UDPTimeout), true, &done, onClose)
 }
 
 func (m *ConnectionManager) connectionCopy(ctx context.Context, source net.Conn, destination net.Conn, direction bool, done *atomic.Bool, onClose N.CloseHandlerFunc) {
