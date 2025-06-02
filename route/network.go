@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/common/taskmonitor"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox/platform"
@@ -395,28 +394,28 @@ func (r *NetworkManager) UpdateWIFIState() {
 }
 
 func (r *NetworkManager) ResetNetwork() {
-	conntrack.Close()
-
-	for _, endpoint := range r.endpoint.Endpoints() {
-		listener, isListener := endpoint.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
-		}
-	}
-
-	for _, inbound := range r.inbound.Inbounds() {
-		listener, isListener := inbound.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
-		}
-	}
-
-	for _, outbound := range r.outbound.Outbounds() {
-		listener, isListener := outbound.(adapter.InterfaceUpdateListener)
-		if isListener {
-			listener.InterfaceUpdated()
-		}
-	}
+	//conntrack.Close()
+	//
+	//for _, endpoint := range r.endpoint.Endpoints() {
+	//	listener, isListener := endpoint.(adapter.InterfaceUpdateListener)
+	//	if isListener {
+	//		listener.InterfaceUpdated()
+	//	}
+	//}
+	//
+	//for _, inbound := range r.inbound.Inbounds() {
+	//	listener, isListener := inbound.(adapter.InterfaceUpdateListener)
+	//	if isListener {
+	//		listener.InterfaceUpdated()
+	//	}
+	//}
+	//
+	//for _, outbound := range r.outbound.Outbounds() {
+	//	listener, isListener := outbound.(adapter.InterfaceUpdateListener)
+	//	if isListener {
+	//		listener.InterfaceUpdated()
+	//	}
+	//}
 }
 
 func (r *NetworkManager) notifyInterfaceUpdate(defaultInterface *control.Interface, flags int) {
