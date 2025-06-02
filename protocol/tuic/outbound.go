@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -33,9 +34,17 @@ var _ adapter.InterfaceUpdateListener = (*Outbound)(nil)
 
 type Outbound struct {
 	outbound.Adapter
-	logger    logger.ContextLogger
-	client    *tuic.Client
-	udpStream bool
+	logger         logger.ContextLogger
+	ctx            context.Context
+	udpStream      bool
+	clients        map[string]*tuic.Client
+	mapDeleteCount int32
+	cltAccess      sync.RWMutex
+	options        option.TUICOutboundOptions
+	uuid           uuid.UUID
+	tlsConf        tls.Config
+	udpStreamMode  bool
+	uos            bool
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TUICOutboundOptions) (adapter.Outbound, error) {
@@ -79,23 +88,110 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if err != nil {
 		return nil, err
 	}
-	return &Outbound{
-		Adapter:   outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, options.Network.Build(), options.DialerOptions),
-		logger:    logger,
-		client:    client,
-		udpStream: options.UDPOverStream,
-	}, nil
+	T := &Outbound{
+		Adapter:       outbound.NewAdapterWithDialerOptions(C.TypeTUIC, tag, options.Network.Build(), options.DialerOptions),
+		ctx:           ctx,
+		clients:       map[string]*tuic.Client{"": client},
+		options:       options,
+		uuid:          userUUID,
+		tlsConf:       tlsConfig,
+		udpStreamMode: tuicUDPStream,
+		uos:           options.UDPOverStream,
+		logger:        logger,
+		udpStream:     options.UDPOverStream,
+	}
+
+	go T.watchClients()
+
+	return T, nil
+}
+
+func (h *Outbound) watchClients() {
+	ticker := time.NewTicker(1 * time.Minute)
+	for {
+		select {
+		case <-h.ctx.Done():
+			return
+		case <-ticker.C:
+			h.cltAccess.Lock()
+			h.filterClients(false, E.New("client idle limit reached"))
+			h.cltAccess.Unlock()
+		}
+	}
+}
+
+func (h *Outbound) filterClients(forceClose bool, err error) {
+	for addr, client := range h.clients {
+		if client.IdleTime() >= C.ClientIdleTimeout || forceClose {
+			_ = client.CloseWithError(err)
+			delete(h.clients, addr)
+			h.logger.Info("Closed client for ", addr, " with err \n", err)
+		}
+	}
+}
+
+func (h *Outbound) getClientForIP(ip string) (*tuic.Client, error) {
+	h.cltAccess.RLock()
+	client, ok := h.clients[ip]
+	h.cltAccess.RUnlock()
+	if ok {
+		return client, nil
+	}
+
+	h.cltAccess.Lock()
+	defer h.cltAccess.Unlock()
+	client, ok = h.clients[ip]
+	if ok {
+		return client, nil
+	}
+
+	client, err := h.createClient()
+	if err != nil {
+		return nil, err
+	}
+	h.clients[ip] = client
+
+	return client, nil
+}
+
+func (h *Outbound) createClient() (*tuic.Client, error) {
+	outboundDialer, err := dialer.New(h.ctx, h.options.DialerOptions, h.options.ServerIsDomain())
+	if err != nil {
+		return nil, err
+	}
+	return tuic.NewClient(tuic.ClientOptions{
+		Context:           h.ctx,
+		Dialer:            outboundDialer,
+		ServerAddress:     h.options.ServerOptions.Build(),
+		TLSConfig:         h.tlsConf,
+		UUID:              h.uuid,
+		Password:          h.options.Password,
+		CongestionControl: h.options.CongestionControl,
+		UDPStream:         h.udpStreamMode,
+		ZeroRTTHandshake:  h.options.ZeroRTTHandshake,
+		Heartbeat:         time.Duration(h.options.Heartbeat),
+	})
+
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+	metadata := adapter.ContextFrom(ctx)
+	var srcAddr string
+	if metadata != nil {
+		srcAddr = metadata.Source.IPAddr().String()
+	}
+	client, err := h.getClientForIP(srcAddr)
+	if err != nil {
+		return nil, err
+	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
-		return h.client.DialConn(ctx, destination)
+		return client.DialConn(ctx, destination)
 	case N.NetworkUDP:
 		if h.udpStream {
 			h.logger.InfoContext(ctx, "outbound stream packet connection to ", destination)
-			streamConn, err := h.client.DialConn(ctx, uot.RequestDestination(uot.Version))
+			streamConn, err := client.DialConn(ctx, uot.RequestDestination(uot.Version))
 			if err != nil {
 				return nil, err
 			}
@@ -116,9 +212,19 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
-	if h.udpStream {
+	metadata := adapter.ContextFrom(ctx)
+	var srcAddr string
+	if metadata != nil {
+		srcAddr = metadata.Source.IPAddr().String()
+	}
+	client, err := h.getClientForIP(srcAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if h.uos {
 		h.logger.InfoContext(ctx, "outbound stream packet connection to ", destination)
-		streamConn, err := h.client.DialConn(ctx, uot.RequestDestination(uot.Version))
+		streamConn, err := client.DialConn(ctx, uot.RequestDestination(uot.Version))
 		if err != nil {
 			return nil, err
 		}
@@ -128,14 +234,19 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 		}), nil
 	} else {
 		h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
-		return h.client.ListenPacket(ctx)
+		return client.ListenPacket(ctx)
 	}
 }
 
 func (h *Outbound) InterfaceUpdated() {
-	_ = h.client.CloseWithError(E.New("network changed"))
+	h.cltAccess.Lock()
+	defer h.cltAccess.Unlock()
+	h.filterClients(true, E.New("network changed"))
 }
 
 func (h *Outbound) Close() error {
-	return h.client.CloseWithError(os.ErrClosed)
+	h.cltAccess.Lock()
+	defer h.cltAccess.Unlock()
+	h.filterClients(true, os.ErrClosed)
+	return nil
 }
