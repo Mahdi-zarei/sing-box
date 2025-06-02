@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -41,8 +42,12 @@ var (
 
 type Outbound struct {
 	outbound.Adapter
-	logger logger.ContextLogger
-	client *hysteria2.Client
+	logger    logger.ContextLogger
+	ctx       context.Context
+	clients   map[string]*hysteria2.Client
+	cltAccess sync.RWMutex
+	options   option.Hysteria2OutboundOptions
+	tlsConf   tls.Config
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.Hysteria2OutboundOptions) (adapter.Outbound, error) {
@@ -148,11 +153,88 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if err != nil {
 		return nil, err
 	}
-	return &Outbound{
+
+	H := &Outbound{
+		ctx:     ctx,
 		Adapter: outbound.NewAdapterWithDialerOptions(C.TypeHysteria2, tag, networkList, options.DialerOptions),
 		logger:  logger,
-		client:  client,
-	}, nil
+		clients: map[string]*hysteria2.Client{"": client},
+		options: options,
+		tlsConf: tlsConfig,
+	}
+
+	return H, nil
+}
+
+func (h *Outbound) watchClients() {
+	ticker := time.NewTicker(1 * time.Minute)
+	for {
+		select {
+		case <-h.ctx.Done():
+			return
+		case <-ticker.C:
+			h.cltAccess.Lock()
+			h.filterClients(false, E.New("client idle limit reached"))
+			h.cltAccess.Unlock()
+		}
+	}
+}
+
+func (h *Outbound) filterClients(forceClose bool, err error) {
+	for addr, client := range h.clients {
+		if client.IdleTime() >= C.ClientIdleTimeout || forceClose {
+			_ = client.CloseWithError(err)
+			delete(h.clients, addr)
+			h.logger.Info("Closed client for ", addr, " with err \n", err)
+		}
+	}
+}
+
+func (h *Outbound) getClientForIP(ip string) (*hysteria2.Client, error) {
+	h.cltAccess.RLock()
+	client, ok := h.clients[ip]
+	h.cltAccess.RUnlock()
+	if ok {
+		return client, nil
+	}
+
+	h.cltAccess.Lock()
+	defer h.cltAccess.Unlock()
+	client, ok = h.clients[ip]
+	if ok {
+		return client, nil
+	}
+
+	client, err := h.createClient()
+	if err != nil {
+		return nil, err
+	}
+	h.clients[ip] = client
+
+	return client, nil
+}
+
+func (h *Outbound) createClient() (*hysteria2.Client, error) {
+	outboundDialer, err := dialer.New(h.ctx, h.options.DialerOptions, h.options.ServerIsDomain())
+	if err != nil {
+		return nil, err
+	}
+	return hysteria2.NewClient(hysteria2.ClientOptions{
+		Context:            h.ctx,
+		Dialer:             outboundDialer,
+		Logger:             h.logger,
+		BrutalDebug:        h.options.BrutalDebug,
+		ServerAddress:      h.options.ServerOptions.Build(),
+		ServerPorts:        h.options.ServerPorts,
+		HopInterval:        time.Duration(h.options.HopInterval),
+		SendBPS:            uint64(h.options.UpMbps * hysteria.MbpsToBps),
+		ReceiveBPS:         uint64(h.options.DownMbps * hysteria.MbpsToBps),
+		SalamanderPassword: h.options.Obfs.Password,
+		Password:           h.options.Password,
+		TLSConfig:          h.tlsConf,
+		UDPDisabled:        false,
+	})
+
 }
 
 func outboundTLSOptions(options option.Hysteria2OutboundOptions) (string, option.OutboundTLSOptions, error) {
@@ -175,10 +257,20 @@ func outboundTLSOptions(options option.Hysteria2OutboundOptions) (string, option
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
+
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
+		metadata := adapter.ContextFrom(ctx)
+		var srcAddr string
+		if metadata != nil {
+			srcAddr = metadata.Source.IPAddr().String()
+		}
+		client, err := h.getClientForIP(srcAddr)
+		if err != nil {
+			return nil, err
+		}
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
-		return h.client.DialConn(ctx, destination)
+		return client.DialConn(ctx, destination)
 	case N.NetworkUDP:
 		conn, err := h.ListenPacket(ctx, destination)
 		if err != nil {
@@ -191,14 +283,28 @@ func (h *Outbound) DialContext(ctx context.Context, network string, destination 
 }
 
 func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
+	metadata := adapter.ContextFrom(ctx)
+	var srcAddr string
+	if metadata != nil {
+		srcAddr = metadata.Source.IPAddr().String()
+	}
+	client, err := h.getClientForIP(srcAddr)
+	if err != nil {
+		return nil, err
+	}
 	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
-	return h.client.ListenPacket(ctx)
+	return client.ListenPacket(ctx)
 }
 
 func (h *Outbound) InterfaceUpdated() {
-	h.client.CloseWithError(E.New("network changed"))
+	h.cltAccess.Lock()
+	defer h.cltAccess.Unlock()
+	h.filterClients(true, E.New("network changed"))
 }
 
 func (h *Outbound) Close() error {
-	return h.client.CloseWithError(os.ErrClosed)
+	h.cltAccess.Lock()
+	defer h.cltAccess.Unlock()
+	h.filterClients(true, os.ErrClosed)
+	return nil
 }
