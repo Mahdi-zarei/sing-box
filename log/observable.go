@@ -2,6 +2,8 @@ package log
 
 import (
 	"context"
+	"errors"
+	"github.com/sagernet/sing/common/baderror"
 	"io"
 	"os"
 	"sync/atomic"
@@ -132,6 +134,20 @@ func (l *observableLogger) Log(ctx context.Context, level Level, args []any) {
 		return
 	}
 	nowTime := time.Now()
+	msgStr := F.ToString(args...)
+	if baderror.Contains(errors.New(msgStr),
+		"i/o timeout",
+		"tls: protocol is shutdown",
+		"handle stream request: read request: EOF",
+		"ws closed: 1000",
+		"keepalive timeout",
+		"connection timed out",
+		"read multiplex stream request: EOF",
+		"name error",
+		"connection refused",
+	) {
+		return
+	}
 	if level <= l.level {
 		if l.needObservable {
 			message, messageSimple := l.formatter.FormatWithSimple(ctx, level, l.tag, F.ToString(args...), nowTime)
@@ -155,7 +171,7 @@ func (l *observableLogger) Log(ctx context.Context, level Level, args []any) {
 		}
 	}
 	if len(platformWriters) > 0 {
-		message := l.platformFormatter.Format(ctx, level, l.tag, F.ToString(args...), nowTime)
+		message := l.platformFormatter.Format(ctx, level, l.tag, msgStr, nowTime)
 		for _, platformWriter := range platformWriters {
 			platformWriter.WriteMessage(level, message)
 		}
