@@ -55,6 +55,7 @@ func NewServer(ctx context.Context, logger logger.ContextLogger, options option.
 		path:    options.Path,
 		method:  options.Method,
 		headers: options.Headers.Build(),
+		logger:  logger,
 	}
 	if !strings.HasPrefix(server.path, "/") {
 		server.path = "/" + server.path
