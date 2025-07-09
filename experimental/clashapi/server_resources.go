@@ -103,19 +103,19 @@ func (s *Server) downloadZIP(name string, body io.Reader, output string) error {
 		if file.FileInfo().IsDir() {
 			continue
 		}
-		pathElements := strings.Split(file.Name, "/")
+		normalizedPath := filepath.Clean(file.Name)
 		if trimDir {
-			pathElements = pathElements[1:]
+			normalizedPath = strings.Join(strings.Split(normalizedPath, string(filepath.Separator))[1:], string(filepath.Separator))
 		}
-		saveDirectory := output
-		if len(pathElements) > 1 {
-			saveDirectory = filepath.Join(saveDirectory, filepath.Join(pathElements[:len(pathElements)-1]...))
+		savePath := filepath.Join(output, normalizedPath)
+		if !strings.HasPrefix(savePath, filepath.Clean(output)+string(filepath.Separator)) {
+			return fmt.Errorf("invalid file path: %s", file.Name)
 		}
+		saveDirectory := filepath.Dir(savePath)
 		err = os.MkdirAll(saveDirectory, 0o755)
 		if err != nil {
 			return err
 		}
-		savePath := filepath.Join(saveDirectory, pathElements[len(pathElements)-1])
 		err = downloadZIPEntry(s.ctx, file, savePath)
 		if err != nil {
 			return err

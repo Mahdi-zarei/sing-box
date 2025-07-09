@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"math"
 	"unsafe"
 
 	N "github.com/sagernet/sing/common/network"
@@ -80,6 +81,11 @@ func ResolveSocketByProcSearch(network string, source, _ netip.AddrPort) int32 {
 		if strings.EqualFold(local, fields[netIndexOfLocal]) {
 			uid, err := strconv.Atoi(fields[netIndexOfUid])
 			if err != nil {
+				return -1
+			}
+
+			// Ensure the value is within the range of int32
+			if uid < math.MinInt32 || uid > math.MaxInt32 {
 				return -1
 			}
 

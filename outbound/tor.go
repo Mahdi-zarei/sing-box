@@ -127,7 +127,7 @@ func (t *Tor) start() error {
 	proxyPassword := t.proxy.Password()
 	t.logger.Trace("created upstream proxy at ", proxyPort)
 	t.logger.Trace("upstream proxy username ", proxyUsername)
-	t.logger.Trace("upstream proxy password ", proxyPassword)
+	t.logger.Trace("upstream proxy password is set")
 	confOptions := []*control.KeyVal{
 		control.NewKeyVal("Socks5Proxy", proxyPort),
 		control.NewKeyVal("Socks5ProxyUsername", proxyUsername),
