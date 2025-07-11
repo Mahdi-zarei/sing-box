@@ -2,6 +2,12 @@ module github.com/sagernet/sing-box
 
 go 1.23.1
 
+replace (
+	github.com/sagernet/sing => github.com/Mahdi-zarei/sing v0.6.7
+	github.com/sagernet/sing-mux => github.com/Mahdi-zarei/sing-mux v0.1.4
+	github.com/sagernet/sing-quic => github.com/Mahdi-zarei/sing-quic v0.1.4
+)
+
 require (
 	github.com/anytls/sing-anytls v0.0.8
 	github.com/caddyserver/certmagic v0.23.0
