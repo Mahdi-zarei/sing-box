@@ -2,6 +2,7 @@ package hysteria2
 
 import (
 	"context"
+	"github.com/sagernet/sing/common/uot"
 	"net"
 	"os"
 	"sync"
@@ -18,7 +19,6 @@ import (
 	"github.com/sagernet/sing-quic/hysteria"
 	"github.com/sagernet/sing-quic/hysteria2"
 	"github.com/sagernet/sing/common"
-	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
@@ -173,26 +173,29 @@ func (h *Outbound) createClient() (*hysteria2.Client, error) {
 }
 
 func (h *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-
+	metadata := adapter.ContextFrom(ctx)
+	var srcAddr string
+	if metadata != nil {
+		srcAddr = metadata.Source.IPAddr().String()
+	}
+	client, err := h.getClientForIP(srcAddr)
+	if err != nil {
+		return nil, err
+	}
 	switch N.NetworkName(network) {
 	case N.NetworkTCP:
-		metadata := adapter.ContextFrom(ctx)
-		var srcAddr string
-		if metadata != nil {
-			srcAddr = metadata.Source.IPAddr().String()
-		}
-		client, err := h.getClientForIP(srcAddr)
-		if err != nil {
-			return nil, err
-		}
 		h.logger.InfoContext(ctx, "outbound connection to ", destination)
 		return client.DialConn(ctx, destination)
 	case N.NetworkUDP:
-		conn, err := h.ListenPacket(ctx, destination)
+		h.logger.InfoContext(ctx, "outbound stream packet connection to ", destination)
+		streamConn, err := client.DialConn(ctx, uot.RequestDestination(uot.Version))
 		if err != nil {
 			return nil, err
 		}
-		return bufio.NewBindPacketConn(conn, destination), nil
+		return uot.NewLazyConn(streamConn, uot.Request{
+			IsConnect:   true,
+			Destination: destination,
+		}), nil
 	default:
 		return nil, E.New("unsupported network: ", network)
 	}
@@ -208,8 +211,15 @@ func (h *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if err != nil {
 		return nil, err
 	}
-	h.logger.InfoContext(ctx, "outbound packet connection to ", destination)
-	return client.ListenPacket(ctx)
+	h.logger.InfoContext(ctx, "outbound stream packet connection to ", destination)
+	streamConn, err := client.DialConn(ctx, uot.RequestDestination(uot.Version))
+	if err != nil {
+		return nil, err
+	}
+	return uot.NewLazyConn(streamConn, uot.Request{
+		IsConnect:   false,
+		Destination: destination,
+	}), nil
 }
 
 func (h *Outbound) InterfaceUpdated() {
