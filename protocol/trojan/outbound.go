@@ -105,7 +105,11 @@ func (h *Outbound) filterMuxClients(forceClose bool, err error) {
 		if client.GetClientIdleTime() >= C.ClientIdleTimeout || forceClose {
 			_ = client.Close()
 			delete(h.muxClients, addr)
-			h.logger.Info("Closed mux client for ", addr, " with err \n", err)
+			if err.Error() == "client idle limit reached" {
+				h.logger.Info("Closed client for ", addr, " with err ", err)
+			} else {
+				h.logger.Error("Closed client for ", addr, " with err ", err)
+			}
 		}
 	}
 }

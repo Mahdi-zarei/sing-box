@@ -34,17 +34,16 @@ var _ adapter.InterfaceUpdateListener = (*Outbound)(nil)
 
 type Outbound struct {
 	outbound.Adapter
-	logger         logger.ContextLogger
-	ctx            context.Context
-	udpStream      bool
-	clients        map[string]*tuic.Client
-	mapDeleteCount int32
-	cltAccess      sync.RWMutex
-	options        option.TUICOutboundOptions
-	uuid           uuid.UUID
-	tlsConf        tls.Config
-	udpStreamMode  bool
-	uos            bool
+	logger        logger.ContextLogger
+	ctx           context.Context
+	udpStream     bool
+	clients       map[string]*tuic.Client
+	cltAccess     sync.RWMutex
+	options       option.TUICOutboundOptions
+	uuid          uuid.UUID
+	tlsConf       tls.Config
+	udpStreamMode bool
+	uos           bool
 }
 
 func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.TUICOutboundOptions) (adapter.Outbound, error) {
@@ -125,7 +124,11 @@ func (h *Outbound) filterClients(forceClose bool, err error) {
 		if client.IdleTime() >= C.ClientIdleTimeout || forceClose {
 			_ = client.CloseWithError(err)
 			delete(h.clients, addr)
-			h.logger.Info("Closed client for ", addr, " with err \n", err)
+			if err.Error() == "client idle limit reached" {
+				h.logger.Info("Closed client for ", addr, " with err ", err)
+			} else {
+				h.logger.Error("Closed client for ", addr, " with err ", err)
+			}
 		}
 	}
 }
