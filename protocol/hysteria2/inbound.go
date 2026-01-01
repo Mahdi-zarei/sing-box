@@ -2,6 +2,7 @@ package hysteria2
 
 import (
 	"context"
+	"github.com/sagernet/sing-box/common/uot"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -30,7 +31,7 @@ func RegisterInbound(registry *inbound.Registry) {
 
 type Inbound struct {
 	inbound.Adapter
-	router       adapter.Router
+	router       adapter.ConnectionRouterEx
 	logger       log.ContextLogger
 	listener     *listener.Listener
 	tlsConfig    tls.ServerConfig
@@ -98,7 +99,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 	}
 	inbound := &Inbound{
 		Adapter: inbound.NewAdapter(C.TypeHysteria2, tag),
-		router:  router,
+		router:  uot.NewRouter(router, logger),
 		logger:  logger,
 		listener: listener.New(listener.Options{
 			Context: ctx,
