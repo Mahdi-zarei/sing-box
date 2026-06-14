@@ -2,6 +2,11 @@ module github.com/sagernet/sing-box
 
 go 1.24.7
 
+replace (
+	github.com/sagernet/sing-mux => github.com/Mahdi-zarei/sing-mux v0.1.4
+	github.com/sagernet/sing-quic => github.com/Mahdi-zarei/sing-quic v0.1.3-0.20260526052611-4b12bdaa56aa
+)
+
 require (
 	github.com/anthropics/anthropic-sdk-go v1.26.0
 	github.com/anytls/sing-anytls v0.0.11
